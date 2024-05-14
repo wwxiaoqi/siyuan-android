@@ -48,6 +48,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import mobile.Mobile;
+import org.mozilla.geckoview.GeckoSession;
 
 /**
  * 工具类.
@@ -64,13 +65,13 @@ public final class Utils {
      */
     public static final String version = BuildConfig.VERSION_NAME;
 
-    public static void registerSoftKeyboardToolbar(final Activity activity, final WebView webView) {
+    public static void registerSoftKeyboardToolbar(final Activity activity, final GeckoSession webView) {
         KeyboardUtils.registerSoftInputChangedListener(activity, height -> {
             if (!activity.isInMultiWindowMode()) {
                 if (KeyboardUtils.isSoftInputVisible(activity)) {
-                    webView.evaluateJavascript("javascript:showKeyboardToolbar()", null);
+                    webView.loadUri("javascript:showKeyboardToolbar()");
                 } else {
-                    webView.evaluateJavascript("javascript:hideKeyboardToolbar()", null);
+                    webView.loadUri("javascript:hideKeyboardToolbar()");
                 }
             }
         });

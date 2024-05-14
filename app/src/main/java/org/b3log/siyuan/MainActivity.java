@@ -37,23 +37,15 @@ import android.util.Log;
 import android.view.DragEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.webkit.CookieManager;
-import android.webkit.PermissionRequest;
 import android.webkit.ValueCallback;
-import android.webkit.WebChromeClient;
-import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
-import android.webkit.WebView;
-import android.webkit.WebViewClient;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
-
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-
 import com.blankj.utilcode.util.AppUtils;
 import com.blankj.utilcode.util.KeyboardUtils;
 import com.blankj.utilcode.util.StringUtils;
@@ -64,13 +56,6 @@ import com.koushikdutta.async.http.body.JSONObjectBody;
 import com.koushikdutta.async.http.server.AsyncHttpServer;
 import com.koushikdutta.async.util.Charsets;
 import com.zackratos.ultimatebarx.ultimatebarx.java.UltimateBarX;
-
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.filefilter.DirectoryFileFilter;
-import org.apache.commons.io.filefilter.TrueFileFilter;
-import org.json.JSONArray;
-import org.json.JSONObject;
-
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.lang.reflect.Field;
@@ -80,9 +65,20 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TimeZone;
-
 import mobile.Mobile;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.filefilter.DirectoryFileFilter;
+import org.apache.commons.io.filefilter.TrueFileFilter;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.mozilla.geckoview.AllowOrDeny;
+import org.mozilla.geckoview.GeckoResult;
+import org.mozilla.geckoview.GeckoRuntime;
+import org.mozilla.geckoview.GeckoSession;
+import org.mozilla.geckoview.GeckoSessionSettings;
+import org.mozilla.geckoview.GeckoView;
 
 /**
  * 主程序.
@@ -92,10 +88,9 @@ import mobile.Mobile;
  * @since 1.0.0
  */
 public class MainActivity extends AppCompatActivity implements com.blankj.utilcode.util.Utils.OnAppStatusChangedListener {
-
     private AsyncHttpServer server;
     private int serverPort = 6906;
-    private WebView webView;
+    private GeckoView webView;
     private ImageView bootLogo;
     private ProgressBar bootProgressBar;
     private TextView bootDetailsText;
@@ -104,22 +99,21 @@ public class MainActivity extends AppCompatActivity implements com.blankj.utilco
     private ValueCallback<Uri[]> uploadMessage;
     private static final int REQUEST_SELECT_FILE = 100;
     private static final int REQUEST_CAMERA = 101;
+    private static GeckoRuntime sRuntime;
+    private GeckoSession session;
 
-    @Override
-    public void onNewIntent(final Intent intent) {
+    @Override public void onNewIntent(final Intent intent) {
         super.onNewIntent(intent);
-        if (null != webView) {
+        if (null != session) {
             final String blockURL = intent.getStringExtra("blockURL");
             if (!StringUtils.isEmpty(blockURL)) {
-                webView.evaluateJavascript("javascript:window.openFileByURL('" + blockURL + "')", null);
+                session.loadUri("javascript:window.openFileByURL('" + blockURL + "')");
             }
         }
     }
 
-    @Override
-    protected void onCreate(final Bundle savedInstanceState) {
+    @Override protected void onCreate(final Bundle savedInstanceState) {
         Log.i("boot", "create main activity");
-
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
@@ -137,14 +131,9 @@ public class MainActivity extends AppCompatActivity implements com.blankj.utilco
 
         AppUtils.registerAppStatusChangedListener(this);
 
-        // 使用 Chromium 调试 WebView
-        if (Utils.isDebugPackageAndMode(this)) {
-            WebView.setWebContentsDebuggingEnabled(true);
-        }
-
         // 注册工具栏显示/隐藏跟随软键盘状态
         // Fix https://github.com/siyuan-note/siyuan/issues/9765
-        Utils.registerSoftKeyboardToolbar(this, webView);
+        Utils.registerSoftKeyboardToolbar(this, session);
 
         // 沉浸式状态栏设置
         UltimateBarX.statusBarOnly(this).transparent().light(false).color(Color.parseColor("#1e1e1e")).apply();
@@ -161,124 +150,101 @@ public class MainActivity extends AppCompatActivity implements com.blankj.utilco
         bootDetailsText = findViewById(R.id.bootDetails);
         webView = findViewById(R.id.webView);
         webView.setBackgroundColor(Color.parseColor("#1e1e1e"));
-        webView.setWebChromeClient(new WebChromeClient() {
-            @Override
-            public boolean onShowFileChooser(final WebView mWebView, final ValueCallback<Uri[]> filePathCallback, final FileChooserParams fileChooserParams) {
-                if (uploadMessage != null) {
-                    uploadMessage.onReceiveValue(null);
-                }
+        session = new GeckoSession();
 
-                uploadMessage = filePathCallback;
+        // Workaround for Bug 1758212
+        session.setContentDelegate(new GeckoSession.ContentDelegate() {});
 
-                if (fileChooserParams.isCaptureEnabled()) {
-                    if (Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) {
-                        // 不支持 Android 10 以下
-                        Toast.makeText(getApplicationContext(), "Capture is not supported on your device (Android 10+ required)", Toast.LENGTH_LONG).show();
-                        uploadMessage = null;
-                        return false;
-                    }
+        if (sRuntime == null) {
+            // GeckoRuntime can only be initialized once per process
+            sRuntime = GeckoRuntime.create(this);
+        }
 
-                    final String[] permissions = {android.Manifest.permission.CAMERA};
-                    if (!hasPermissions(permissions)) {
-                        ActivityCompat.requestPermissions(MainActivity.this, permissions, REQUEST_CAMERA);
-                        return true;
-                    }
-
-                    openCamera();
-                    return true;
-                }
-
-                final Intent intent = fileChooserParams.createIntent();
-                intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
-                try {
-                    startActivityForResult(intent, REQUEST_SELECT_FILE);
-                } catch (final Exception e) {
-                    uploadMessage = null;
-                    Toast.makeText(getApplicationContext(), "Cannot open file chooser", Toast.LENGTH_LONG).show();
-                    return false;
-                }
-                return true;
-            }
-
-            @Override
-            public void onPermissionRequest(final PermissionRequest request) {
-                request.grant(request.getResources());
-            }
-
-        });
+        session.setPermissionDelegate(new GeckoViewPermissionDelegate());
+        session.open(sRuntime);
+        webView.setSession(session);
 
         webView.setOnDragListener((v, event) -> {
             // 禁用拖拽 https://github.com/siyuan-note/siyuan/issues/6436
             return DragEvent.ACTION_DRAG_ENDED != event.getAction();
         });
 
-        final WebSettings ws = webView.getSettings();
-        checkWebViewVer(ws);
-        userAgent = ws.getUserAgentString();
+        userAgent = GeckoSession.getDefaultUserAgent();
     }
 
-    @SuppressLint("SetJavaScriptEnabled")
-    private void showBootIndex() {
+    @SuppressLint("SetJavaScriptEnabled") private void showBootIndex() {
         webView.setVisibility(View.VISIBLE);
-        webView.setWebViewClient(new WebViewClient() {
-            @Override
-            public boolean shouldOverrideUrlLoading(final WebView view, final WebResourceRequest request) {
-                final Uri uri = request.getUrl();
-                final String url = uri.toString();
-                if (url.contains("127.0.0.1")) {
-                    view.loadUrl(url);
-                    return true;
-                }
+        session.loadUri("http://127.0.0.1:6806/appearance/boot/index.html?v=" + Utils.version);
 
-                if (url.contains("siyuan://api/system/exit")) {
-                    exit();
-                    return true;
+        session.setProgressDelegate(new GeckoSession.ProgressDelegate() {
+            @Override public void onPageStop(@NonNull GeckoSession session, boolean success) {
+                // 页面停止加载时的处理
+                if (success) {
+                    // 如果页面加载成功，隐藏启动画面
+                    new Handler().postDelayed(() -> {
+                        bootLogo.setVisibility(View.GONE);
+                        bootProgressBar.setVisibility(View.GONE);
+                        bootDetailsText.setVisibility(View.GONE);
+                        final ImageView bootLogo = findViewById(R.id.bootLogo);
+                        bootLogo.setVisibility(View.GONE);
+                    }, 666);
                 }
-
-                if (uri.getScheme().toLowerCase().startsWith("http")) {
-                    final Intent i = new Intent(Intent.ACTION_VIEW, uri);
-                    startActivity(i);
-                    return true;
-                }
-                return true;
-            }
-
-            @Override
-            public void onPageFinished(WebView view, String url) {
-                new Handler().postDelayed(() -> {
-                    bootLogo.setVisibility(View.GONE);
-                    bootProgressBar.setVisibility(View.GONE);
-                    bootDetailsText.setVisibility(View.GONE);
-                    final ImageView bootLogo = findViewById(R.id.bootLogo);
-                    bootLogo.setVisibility(View.GONE);
-                }, 666);
             }
         });
 
-        final JSAndroid JSAndroid = new JSAndroid(this);
-        webView.addJavascriptInterface(JSAndroid, "JSAndroid");
-        CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
-        final WebSettings ws = webView.getSettings();
-        ws.setJavaScriptEnabled(true);
-        ws.setDomStorageEnabled(true);
-        ws.setCacheMode(WebSettings.LOAD_NO_CACHE);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            ws.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-        }
-        ws.setTextZoom(100);
-        ws.setUseWideViewPort(true);
-        ws.setLoadWithOverviewMode(true);
-        ws.setUserAgentString("SiYuan/" + Utils.version + " https://b3log.org/siyuan Android " + ws.getUserAgentString());
+        // 设置 JavaScript 和其他 GeckoSessionSettings
+        // GeckoSessionSettings settings = session.getSettings();
+        // settings.setAllowJavascript(true);
+        // settings.setDomStorageEnabled(true);
+        // settings.setCacheMode(GeckoSessionSettings.CACHE_MODE_NO_CACHE);
+        // settings.setTextZoom(100);
+        // settings.setUseWideViewPort(true);
+        // settings.setLoadWithOverviewMode(true);
+
+        // 设置自定义 User-Agent
+        // String userAgent = "SiYuan/" + Utils.version + " https://b3log.org/siyuan Android " + settings.getUserAgentOverride();
+        // settings.setUserAgentOverride(userAgent);
+        session.setNavigationDelegate(new GeckoSession.NavigationDelegate() {
+            @NonNull @Override public GeckoResult<AllowOrDeny> onLoadRequest(@NonNull GeckoSession geckoSession, @NonNull LoadRequest loadRequest) {
+
+                if (loadRequest.uri.contains("127.0.0.1")) {
+                    Log.d("MainActivity", "onLoadRequest() returned: " + loadRequest.uri);
+                    return GeckoResult.fromValue(AllowOrDeny.ALLOW);
+                }
+
+                if (loadRequest.uri.contains("siyuan://api/system/exit")) {
+                    exit();
+                    return GeckoResult.fromValue(AllowOrDeny.ALLOW);
+                }
+
+                if (Objects.requireNonNull(Uri.parse(loadRequest.uri).getScheme()).toLowerCase().startsWith("http")) {
+                    Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(loadRequest.uri));
+                    startActivity(i);
+                    return GeckoResult.fromValue(AllowOrDeny.ALLOW);
+                }
+
+                return GeckoResult.fromValue(AllowOrDeny.DENY);
+            }
+
+            @Override public void onLocationChange(@NonNull GeckoSession session, String url) {
+                // 此方法在 URL 发生变化时被调用
+            }
+
+            @Override public void onCanGoBack(@NonNull GeckoSession session, boolean canGoBack) {
+                // 可以后退时的处理
+            }
+
+            @Override public void onCanGoForward(@NonNull GeckoSession session, boolean canGoForward) {
+                // 可以前进时的处理
+            }
+        });
 
         waitFotKernelHttpServing();
-        webView.loadUrl("http://127.0.0.1:6806/appearance/boot/index.html?v=" + Utils.version);
-
         new Thread(this::keepLive).start();
     }
 
-    private Handler bootHandler = new Handler(Looper.getMainLooper()) {
-        @Override
-        public void handleMessage(final Message msg) {
+    private final Handler bootHandler = new Handler(Looper.getMainLooper()) {
+        @Override public void handleMessage(final Message msg) {
             final String cmd = msg.getData().getString("cmd");
             if ("startKernel".equals(cmd)) {
                 bootKernel();
@@ -384,7 +350,7 @@ public class MainActivity extends AppCompatActivity implements com.blankj.utilco
         final String language = locale.getLanguage().toLowerCase(); // 获取语言代码
         final String script = locale.getScript().toLowerCase(); // 获取脚本代码
         final String country = locale.getCountry().toLowerCase(); // 获取国家代码
-        final String workspaceBaseDir = getExternalFilesDir(null).getAbsolutePath();
+        final String workspaceBaseDir = Objects.requireNonNull(getExternalFilesDir(null)).getAbsolutePath();
         final String timezone = TimeZone.getDefault().getID();
         new Thread(() -> {
             final String localIPs = Utils.getIPAddressList();
@@ -418,13 +384,7 @@ public class MainActivity extends AppCompatActivity implements com.blankj.utilco
                 langCode = otherLangMap.getOrDefault(language, "en_US");
             }
 
-            Mobile.startKernel("android", appDir, workspaceBaseDir, timezone, localIPs, langCode,
-                    Build.VERSION.RELEASE +
-                            "/SDK " + Build.VERSION.SDK_INT +
-                            "/WebView " + webViewVer +
-                            "/Manufacturer " + android.os.Build.MANUFACTURER +
-                            "/Brand " + android.os.Build.BRAND +
-                            "/UA " + userAgent);
+            Mobile.startKernel("android", appDir, workspaceBaseDir, timezone, localIPs, langCode, Build.VERSION.RELEASE + "/SDK " + Build.VERSION.SDK_INT + "/WebView " + webViewVer + "/Manufacturer " + android.os.Build.MANUFACTURER + "/Brand " + android.os.Build.BRAND + "/UA " + userAgent);
         }).start();
 
         final Bundle b = new Bundle();
@@ -444,7 +404,7 @@ public class MainActivity extends AppCompatActivity implements com.blankj.utilco
                 ContextCompat.startForegroundService(this, intent);
                 sleep(45 * 1000);
                 stopService(intent);
-            } catch (final Throwable t) {
+            } catch (final Throwable ignored) {
             }
         }
     }
@@ -453,12 +413,9 @@ public class MainActivity extends AppCompatActivity implements com.blankj.utilco
      * 等待内核 HTTP 服务伺服。
      */
     private void waitFotKernelHttpServing() {
-        while (true) {
+        do {
             sleep(10);
-            if (Mobile.isHttpServing()) {
-                break;
-            }
-        }
+        } while (!Mobile.isHttpServing());
     }
 
     private void initAppearance() {
@@ -509,9 +466,9 @@ public class MainActivity extends AppCompatActivity implements com.blankj.utilco
         }
     }
 
-    @Override
-    public void onBackPressed() {
-        webView.evaluateJavascript("javascript:window.goBack ? window.goBack() : window.history.back()", null);
+    @Override public void onBackPressed() {
+        super.onBackPressed();
+        session.loadUri("javascript:window.goBack ? window.goBack() : window.history.back()");
     }
 
     // 用于保存拍照图片的 uri
@@ -526,8 +483,7 @@ public class MainActivity extends AppCompatActivity implements com.blankj.utilco
         return true;
     }
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+    @Override public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         if (requestCode == REQUEST_CAMERA) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 openCamera();
@@ -553,8 +509,7 @@ public class MainActivity extends AppCompatActivity implements com.blankj.utilco
         }
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
+    @Override protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
         if (null == uploadMessage) {
             super.onActivityResult(requestCode, resultCode, intent);
             return;
@@ -567,7 +522,7 @@ public class MainActivity extends AppCompatActivity implements com.blankj.utilco
                 return;
             }
 
-            uploadMessage.onReceiveValue(new Uri[]{mCameraUri});
+            uploadMessage.onReceiveValue(new Uri[] { mCameraUri });
         } else if (requestCode == REQUEST_SELECT_FILE) {
             // 以下代码参考自 https://github.com/mgks/os-fileup/blob/master/app/src/main/java/mgks/os/fileup/MainActivity.java MIT license
 
@@ -592,13 +547,14 @@ public class MainActivity extends AppCompatActivity implements com.blankj.utilco
                 try {
                     Bitmap cam_photo = (Bitmap) intent.getExtras().get("data");
                     ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+                    assert cam_photo != null;
                     cam_photo.compress(Bitmap.CompressFormat.JPEG, 100, bytes);
                     stringData = MediaStore.Images.Media.insertImage(this.getContentResolver(), cam_photo, null, null);
                 } catch (Exception ignored) {
                 }
 
                 if (!StringUtils.isEmpty(stringData)) {
-                    results = new Uri[]{Uri.parse(stringData)};
+                    results = new Uri[] { Uri.parse(stringData) };
                 }
             }
 
@@ -633,36 +589,32 @@ public class MainActivity extends AppCompatActivity implements com.blankj.utilco
         return ret;
     }
 
-    @Override
-    protected void onDestroy() {
+    @Override protected void onDestroy() {
         Log.i("boot", "destroy main activity");
         super.onDestroy();
         KeyboardUtils.unregisterSoftInputChangedListener(getWindow());
         AppUtils.unregisterAppStatusChangedListener(this);
         if (null != webView) {
             webView.removeAllViews();
-            webView.destroy();
+            webView.destroyDrawingCache();
         }
         if (null != server) {
             server.stop();
         }
     }
 
-    @Override
-    public void onForeground(Activity activity) {
+    @Override public void onForeground(Activity activity) {
         startSyncData();
         if (null != webView) {
-            webView.evaluateJavascript("javascript:window.reconnectWebSocket()", null);
+            session.loadUri("javascript:window.reconnectWebSocket()");
         }
     }
 
-    @Override
-    public void onBackground(Activity activity) {
+    @Override public void onBackground(Activity activity) {
         startSyncData();
     }
 
-    @Override
-    public void onMultiWindowModeChanged(boolean isInMultiWindowMode) {
+    @Override public void onMultiWindowModeChanged(boolean isInMultiWindowMode) {
         super.onMultiWindowModeChanged(isInMultiWindowMode);
     }
 
@@ -708,19 +660,39 @@ public class MainActivity extends AppCompatActivity implements com.blankj.utilco
 
             final AsyncHttpPost req = new com.koushikdutta.async.http.AsyncHttpPost("http://127.0.0.1:6806/api/sync/performSync");
             req.setBody(new JSONObjectBody(new JSONObject().put("mobileSwitch", true)));
-            AsyncHttpClient.getDefaultInstance().executeJSONObject(req,
-                    new com.koushikdutta.async.http.AsyncHttpClient.JSONObjectCallback() {
-                        @Override
-                        public void onCompleted(Exception e, com.koushikdutta.async.http.AsyncHttpResponse source, JSONObject result) {
-                            if (null != e) {
-                                Utils.LogError("sync", "data sync failed", e);
-                            }
-                        }
-                    });
+            AsyncHttpClient.getDefaultInstance().executeJSONObject(req, new com.koushikdutta.async.http.AsyncHttpClient.JSONObjectCallback() {
+                @Override public void onCompleted(Exception e, com.koushikdutta.async.http.AsyncHttpResponse source, JSONObject result) {
+                    if (null != e) {
+                        Utils.LogError("sync", "data sync failed", e);
+                    }
+                }
+            });
         } catch (final Throwable e) {
             Utils.LogError("sync", "data sync failed", e);
         } finally {
             syncing = false;
         }
     }
+
+    private class GeckoViewPermissionDelegate implements GeckoSession.PermissionDelegate {
+        @Override public void onMediaPermissionRequest(@NonNull final GeckoSession session, @NonNull final String uri, final MediaSource[] video, final MediaSource[] audio, @NonNull final MediaCallback callback) {
+            // Reject permission if Android permission has been previously denied.
+            if (video != null && ContextCompat.checkSelfPermission(MainActivity.this, android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                callback.reject();
+                uploadMessage = null;
+                return;
+            }
+
+            if (Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) {
+                // 不支持 Android 10 以下
+                Toast.makeText(getApplicationContext(), "Capture is not supported on your device (Android 10+ required)", Toast.LENGTH_LONG).show();
+                uploadMessage = null;
+                return;
+            }
+
+            openCamera();
+            callback.reject();
+        }
+    }
 }
+

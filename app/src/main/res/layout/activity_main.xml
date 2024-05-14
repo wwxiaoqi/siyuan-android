@@ -7,10 +7,10 @@
     android:background="#1e1e1e"
     tools:context=".MainActivity">
 
-    <WebView
+    <org.mozilla.geckoview.GeckoView
         android:id="@+id/webView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
         android:visibility="gone" />
 
     <LinearLayout
