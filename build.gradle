@@ -3,11 +3,18 @@ buildscript {
     ext {
         siyuanVersionCode = 234
         siyuanVersionName = "3.0.14"
+
+        // 版本获取 URL：
+        // https://maven.mozilla.org/?prefix=maven2/org/mozilla/geckoview/geckoview-arm64-v8a/
+        geckoviewChannel = "arm64-v8a"
+        // geckoviewChannel = "x86_64"
+        geckoviewVersion = "100.0.20220425210429"
     }
     repositories {
         maven { url 'https://maven.aliyun.com/repository/google' }
         maven { url 'https://maven.aliyun.com/repository/public' }
         maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+        maven { url "https://maven.mozilla.org/maven2/" }
         google()
         mavenCentral()
     }
@@ -25,7 +32,7 @@ allprojects {
         // https://developer.aliyun.com/mvn/guide?spm=a2c6h.13651104.0.0.435836a4Lghjtb
         maven { url 'https://maven.aliyun.com/repository/google' }
         maven { url 'https://maven.aliyun.com/repository/public' }
-
+        maven { url "https://maven.mozilla.org/maven2/" }
         google()
         mavenCentral()
         maven { url 'https://jitpack.io' }
