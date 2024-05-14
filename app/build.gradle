@@ -1,5 +1,6 @@
 plugins {
     id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
 }
 
 // 多渠道打包配置已引用的方式传递
@@ -92,7 +93,10 @@ android {
     lint {
         abortOnError false
     }
-
+    // add kotlin jvm configure
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
 }
 
 dependencies {
@@ -106,4 +110,5 @@ dependencies {
     implementation 'com.gitee.zackratos:UltimateBarX:0.8.0'
     implementation 'com.blankj:utilcodex:1.31.1'
     implementation 'com.koushikdutta.async:androidasync:2.2.1'
+    implementation 'androidx.core:core-ktx:1.10.1'
 }
