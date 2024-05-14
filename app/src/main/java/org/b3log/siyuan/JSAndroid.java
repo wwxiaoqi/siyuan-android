@@ -168,7 +168,7 @@ public final class JSAndroid {
     @JavascriptInterface
     public void changeStatusBarColor(final String color, final int appearanceMode) {
         activity.runOnUiThread(() -> {
-            UltimateBarX.statusBarOnly(activity).transparent().light(appearanceMode == 0).color(parseColor(color)).apply();
+            // UltimateBarX.statusBarOnly(activity).transparent().light(appearanceMode == 0).color(parseColor(color)).apply();
 
             BarUtils.setNavBarLightMode(activity, appearanceMode == 0);
             BarUtils.setNavBarColor(activity, parseColor(color));

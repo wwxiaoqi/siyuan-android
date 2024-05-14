@@ -1,6 +1,6 @@
 plugins {
-    id 'com.android.application'
-    id 'org.jetbrains.kotlin.android'
+    alias(libs.plugins.androidApplication)
+    alias(libs.plugins.jetbrainsKotlinAndroid)
 }
 
 // 多渠道打包配置已引用的方式传递
@@ -38,8 +38,16 @@ android {
         applicationId "org.b3log.siyuan"
         minSdk 24
         targetSdk 34
-        versionCode siyuanVersionCode
-        versionName siyuanVersionName
+        versionCode 234
+        versionName "3.0.14"
+
+        // 开启矢量图支持库
+        // 从 Android 5.0 (API 级别 21) 开始，矢量图（VectorDrawable）被引入
+        vectorDrawables {
+            // 使用支持库来让 VectorDrawables 在老版本的 Android 系统上工作
+            // 这样可以确保在老版本系统上也能使用矢量图资源
+            useSupportLibrary true
+        }
     }
 
     buildTypes {
@@ -63,12 +71,6 @@ android {
         }
     }
 
-    repositories {
-        flatDir {
-            dirs 'libs'
-        }
-    }
-
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
@@ -83,7 +85,9 @@ android {
                          'META-INF/NOTICE',
                          'META-INF/NOTICE.txt',
                          'META-INF/notice.txt',
-                         'plugin.properties']
+                         'plugin.properties',
+                         '/META-INF/{AL2.0,LGPL2.1}'
+            ]
         }
         jniLibs {
             useLegacyPackaging true
@@ -97,18 +101,42 @@ android {
     kotlinOptions {
         jvmTarget = '1.8'
     }
+    // 启用 Compose 功能
+    buildFeatures {
+        compose true
+        buildConfig true // custom BuildConfig fields
+    }
+    // 定义 Kotlin 编译器扩展与 Kotlin 版本相关联
+    // https://developer.android.com/jetpack/androidx/releases/compose-kotlin?hl=zh-cn
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.13"
+    }
 }
 
 dependencies {
-    implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'com.google.android.material:material:1.10.0'
-    implementation 'androidx.lifecycle:lifecycle-process:2.6.1'
-    implementation 'androidx.work:work-runtime:2.8.1'
+    // 思源内核 kernel
+    implementation files('libs/kernel.aar')
 
-    implementation(name: 'kernel', ext: 'aar')
+    implementation libs.ultimateBarx
+    implementation libs.utilcodex
+    implementation libs.androidasync
     implementation("commons-io:commons-io:2.5") // 不要升级，否则无法兼容 Android 7
-    implementation 'com.gitee.zackratos:UltimateBarX:0.8.0'
-    implementation 'com.blankj:utilcodex:1.31.1'
-    implementation 'com.koushikdutta.async:androidasync:2.2.1'
-    implementation 'androidx.core:core-ktx:1.10.1'
+
+    implementation libs.androidx.work.runtime
+
+    implementation libs.androidx.core.ktx
+    implementation libs.androidx.lifecycle.runtime.ktx
+    implementation libs.androidx.activity.compose
+    implementation platform(libs.androidx.compose.bom)
+    implementation libs.androidx.ui
+    implementation libs.androidx.ui.graphics
+    implementation libs.androidx.ui.tooling.preview
+    implementation libs.androidx.material3
+    testImplementation libs.junit
+    androidTestImplementation libs.androidx.junit
+    androidTestImplementation libs.androidx.espresso.core
+    androidTestImplementation platform(libs.androidx.compose.bom)
+    androidTestImplementation libs.androidx.ui.test.junit4
+    debugImplementation libs.androidx.ui.tooling
+    debugImplementation libs.androidx.ui.test.manifest
 }

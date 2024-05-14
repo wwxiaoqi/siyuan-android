@@ -50,7 +50,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
+import androidx.activity.ComponentActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
@@ -91,7 +91,7 @@ import mobile.Mobile;
  * @version 1.1.0.3, Apr 24, 2024
  * @since 1.0.0
  */
-public class MainActivity extends AppCompatActivity implements com.blankj.utilcode.util.Utils.OnAppStatusChangedListener {
+public class MainActivity extends ComponentActivity implements com.blankj.utilcode.util.Utils.OnAppStatusChangedListener {
 
     private AsyncHttpServer server;
     private int serverPort = 6906;
@@ -147,8 +147,8 @@ public class MainActivity extends AppCompatActivity implements com.blankj.utilco
         Utils.registerSoftKeyboardToolbar(this, webView);
 
         // 沉浸式状态栏设置
-        UltimateBarX.statusBarOnly(this).transparent().light(false).color(Color.parseColor("#1e1e1e")).apply();
-        ((ViewGroup) webView.getParent()).setPadding(0, UltimateBarX.getStatusBarHeight(), 0, 0);
+        // UltimateBarX.statusBarOnly(this).transparent().light(false).color(Color.parseColor("#1e1e1e")).apply();
+        // ((ViewGroup) webView.getParent()).setPadding(0, UltimateBarX.getStatusBarHeight(), 0, 0);
 
         // Fix https://github.com/siyuan-note/siyuan/issues/9726
         // KeyboardUtils.fixAndroidBug5497(this);

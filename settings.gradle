@@ -1,2 +1,64 @@
-include ':app'
+/**
+ * 项目级别的插件插件管理配置
+ *
+ * 通过使用 content 选择器，您可以精确控制包含哪些插件组
+ *
+ * The pluginManagement.repositories block configures the
+ * repositories Gradle uses to search or download the Gradle plugins and
+ * their transitive dependencies. Gradle pre-configures support for remote
+ * repositories such as JCenter, Maven Central, and Ivy. You can also use
+ * local repositories or define your own remote repositories. The code below
+ * defines the Gradle Plugin Portal, Google's Maven repository,
+ * and the Maven Central Repository as the repositories Gradle should use to look for its
+ * dependencies.
+ */
+pluginManagement {
+  repositories {
+    google {
+      content {
+        includeGroupByRegex("com\\.android.*")
+        includeGroupByRegex("com\\.google.*")
+        includeGroupByRegex("androidx.*")
+      }
+    }
+    // 阿里云 Maven 中央仓库下载源
+    // https://developer.aliyun.com/mvn/guide?spm=a2c6h.13651104.0.0.435836a4Lghjtb
+    maven { url 'https://maven.aliyun.com/repository/google' }
+    maven { url 'https://maven.aliyun.com/repository/public' }
+    maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+    mavenCentral()
+    gradlePluginPortal()
+    maven { url 'https://jitpack.io' }
+  }
+}
+
+/**
+ * 根依赖项解析管理配置，用于配置依赖项解析的策略
+ *
+ * 在此部分定义的仓库将被用于所有子项目的依赖项解析
+ *
+ * The dependencyResolutionManagement.repositories
+ * block is where you configure the repositories and dependencies used by
+ * all modules in your project, such as libraries that you are using to
+ * create your application. However, you should configure module-specific
+ * dependencies in each module-level build.gradle file. For new projects,
+ * Android Studio includes Google's Maven repository and the Maven Central
+ * Repository by default, but it does not configure any dependencies (unless
+ * you select a template that requires some).
+ */
+dependencyResolutionManagement {
+  repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS) // 如果项目中定义了额外的仓库，则构建失败
+  repositories {
+    // 阿里云 Maven 中央仓库下载源
+    // https://developer.aliyun.com/mvn/guide?spm=a2c6h.13651104.0.0.435836a4Lghjtb
+    maven { url 'https://maven.aliyun.com/repository/google' }
+    maven { url 'https://maven.aliyun.com/repository/public' }
+    maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+    google()
+    mavenCentral()
+    maven { url 'https://jitpack.io' }
+  }
+}
+
 rootProject.name = "SiYuan"
+include ':app'

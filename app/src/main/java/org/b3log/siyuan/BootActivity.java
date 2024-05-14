@@ -30,14 +30,11 @@ import android.text.Html;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.widget.TextView;
-
-import androidx.appcompat.app.AppCompatActivity;
-
-import org.apache.commons.io.FileUtils;
-
+import androidx.activity.ComponentActivity;
 import java.io.File;
 import java.util.HashSet;
 import java.util.Set;
+import org.apache.commons.io.FileUtils;
 
 /**
  * 引导启动.
@@ -46,7 +43,7 @@ import java.util.Set;
  * @version 1.1.0.4, Feb 13, 2024
  * @since 1.0.0
  */
-public class BootActivity extends AppCompatActivity {
+public class BootActivity extends ComponentActivity {
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
