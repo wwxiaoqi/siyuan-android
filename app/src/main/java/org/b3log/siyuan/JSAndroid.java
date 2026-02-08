@@ -18,6 +18,7 @@
 package org.b3log.siyuan;
 
 import android.content.ClipData;
+import android.content.ClipDescription;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
@@ -45,7 +46,7 @@ import mobile.Mobile;
  *
  * @author <a href="https://88250.b3log.org">Liang Ding</a>
  * @author <a href="https://github.com/Soltus">绛亽</a>
- * @version 1.4.0.1, Feb 4, 2026
+ * @version 1.5.0.0, Feb 8, 2026
  * @since 1.0.0
  */
 public final class JSAndroid {
@@ -140,6 +141,24 @@ public final class JSAndroid {
     }
 
     @JavascriptInterface
+    public String readSiYuanHTMLClipboard() {
+        final ClipboardManager clipboard = (ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE);
+        final ClipData clipData = clipboard.getPrimaryClip();
+        if (null == clipData) {
+            return "";
+        }
+
+        if (clipData.getDescription().hasMimeType("text/siyuan") && 2 == clipData.getItemCount()) {
+            final ClipData.Item item = clipData.getItemAt(1);
+            final CharSequence text = item.getText();
+            if (null != text) {
+                return text.toString();
+            }
+        }
+        return "";
+    }
+
+    @JavascriptInterface
     public void writeImageClipboard(final String uri) {
         final ClipboardManager clipboard = (ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE);
         final ClipData clip = ClipData.newUri(activity.getContentResolver(), "Copied img from SiYuan", Uri.parse("http://127.0.0.1:6806/" + uri));
@@ -158,6 +177,17 @@ public final class JSAndroid {
         final ClipboardManager clipboard = (ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE);
         final ClipData clip = ClipData.newHtmlText("Copied html from SiYuan", text, html);
         clipboard.setPrimaryClip(clip);
+    }
+
+    @JavascriptInterface
+    public void writeSiYuanHTMLClipboard(final String text, final String html, final String siyuanHTML) {
+        final ClipboardManager clipboard = (ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE);
+        final String[] mimeTypes = new String[]{ClipDescription.MIMETYPE_TEXT_PLAIN, ClipDescription.MIMETYPE_TEXT_HTML, "text/siyuan"};
+        final ClipData.Item standardItem = new ClipData.Item(text, html, null, null);
+        final ClipData.Item siyuanItem = new ClipData.Item(siyuanHTML);
+        ClipData clipData = new ClipData("Copied html from SiYuan", mimeTypes, standardItem);
+        clipData.addItem(siyuanItem);
+        clipboard.setPrimaryClip(clipData);
     }
 
     @JavascriptInterface
