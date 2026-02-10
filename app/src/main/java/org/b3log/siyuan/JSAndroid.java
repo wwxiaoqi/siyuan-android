@@ -46,7 +46,7 @@ import mobile.Mobile;
  *
  * @author <a href="https://88250.b3log.org">Liang Ding</a>
  * @author <a href="https://github.com/Soltus">绛亽</a>
- * @version 1.5.0.0, Feb 8, 2026
+ * @version 1.5.0.1, Feb 10, 2026
  * @since 1.0.0
  */
 public final class JSAndroid {
@@ -65,17 +65,17 @@ public final class JSAndroid {
     public void hideKeyboard() {
         activity.runOnUiThread(() -> {
             final WebView webView = activity.findViewById(R.id.webView);
-            Utils.setImeEnabled(webView, false);
+            Utils.hideKeyboardAndToolbar(webView);
             KeyboardUtils.hideSoftInput(activity);
-            //Utils.logInfo("keyboard", "Hide keyboard");
         });
     }
 
     @JavascriptInterface
     public void showKeyboard() {
         activity.runOnUiThread(() -> {
+            final WebView webView = activity.findViewById(R.id.webView);
+            Utils.showKeyboardAndToolbar(webView);
             KeyboardUtils.showSoftInput(activity);
-            //Utils.logInfo("keyboard", "Show keyboard");
         });
     }
 

@@ -37,6 +37,8 @@ import android.webkit.WebViewClient;
 import android.widget.Toast;
 
 import androidx.annotation.StringRes;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import com.blankj.utilcode.util.KeyboardUtils;
 import com.blankj.utilcode.util.StringUtils;
@@ -69,7 +71,7 @@ import mobile.Mobile;
  *
  * @author <a href="https://88250.b3log.org">Liang Ding</a>
  * @author <a href="https://github.com/wwxiaoqi">Jane Haring</a>
- * @version 1.5.0.1, Feb 4, 2026
+ * @version 1.5.0.2, Feb 10, 2026
  * @since 1.0.0
  */
 public final class Utils {
@@ -178,20 +180,36 @@ public final class Utils {
 
     public static void registerSoftKeyboardToolbar(final Activity activity, final WebView webView) {
         KeyboardUtils.registerSoftInputChangedListener(activity, height -> {
-            if (activity.isInMultiWindowMode()) {
-                Utils.logInfo("keyboard", "In multi window mode, do not show keyboard toolbar");
-                return;
-            }
-
             if (KeyboardUtils.isSoftInputVisible(activity)) {
-                Utils.setImeEnabled(webView, true);
-                webView.postDelayed(() -> webView.evaluateJavascript("javascript:showKeyboardToolbar();", null), 288);
-                //Utils.logInfo("keyboard", "Show keyboard toolbar");
+                showKeyboardAndToolbar(webView);
             } else {
-                webView.evaluateJavascript("javascript:hideKeyboardToolbar();document.activeElement.blur();", null);
-                //Utils.logInfo("keyboard", "Hide keyboard toolbar");
-                Utils.setImeEnabled(webView, false);
+                hideKeyboardAndToolbar(webView);
             }
+        });
+
+        ViewCompat.setOnApplyWindowInsetsListener(activity.getWindow().getDecorView(), (v, insets) -> {
+            // 多窗口模式下，监听窗口插图以获取 IME 状态
+            boolean isVisible = insets.isVisible(WindowInsetsCompat.Type.ime());
+            if (isVisible) {
+                showKeyboardAndToolbar(webView);
+            } else {
+                hideKeyboardAndToolbar(webView);
+            }
+            return insets;
+        });
+    }
+
+    public static void showKeyboardAndToolbar(final WebView webView) {
+        webView.post(() -> {
+            webView.postDelayed(() -> webView.evaluateJavascript("javascript:showKeyboardToolbar();", null), 288);
+            Utils.setImeEnabled(webView, true);
+        });
+    }
+
+    public static void hideKeyboardAndToolbar(final WebView webView) {
+        webView.post(() -> {
+            webView.evaluateJavascript("javascript:hideKeyboardToolbar();document.activeElement.blur();", null);
+            Utils.setImeEnabled(webView, false);
         });
     }
 
