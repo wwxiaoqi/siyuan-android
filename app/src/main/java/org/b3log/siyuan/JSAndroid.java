@@ -46,7 +46,7 @@ import mobile.Mobile;
  *
  * @author <a href="https://88250.b3log.org">Liang Ding</a>
  * @author <a href="https://github.com/Soltus">绛亽</a>
- * @version 1.5.0.1, Feb 10, 2026
+ * @version 1.5.0.2, Feb 11, 2026
  * @since 1.0.0
  */
 public final class JSAndroid {
@@ -262,7 +262,7 @@ public final class JSAndroid {
 
     @JavascriptInterface
     public void changeStatusBarColor(final String color, final int appearanceMode) {
-        if (Utils.isTablet(MainActivity.userAgent)) {
+        if (Utils.isTablet(activity)) {
             return;
         }
 

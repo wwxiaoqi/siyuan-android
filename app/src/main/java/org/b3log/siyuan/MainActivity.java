@@ -93,7 +93,7 @@ import mobile.Mobile;
  * 主程序.
  *
  * @author <a href="https://88250.b3log.org">Liang Ding</a>
- * @version 1.1.3.0, Feb 11, 2026
+ * @version 1.1.3.1, Feb 11, 2026
  * @since 1.0.0
  */
 public class MainActivity extends AppCompatActivity implements com.blankj.utilcode.util.Utils.OnAppStatusChangedListener {
@@ -162,7 +162,7 @@ public class MainActivity extends AppCompatActivity implements com.blankj.utilco
         // Fix https://github.com/siyuan-note/siyuan/issues/9765
         Utils.registerSoftKeyboardToolbar(this, webView);
 
-        if (Utils.isTablet(userAgent)) {
+        if (Utils.isTablet(this)) {
             // 平板上隐藏状态栏 Hide the status bar on tablet https://github.com/siyuan-note/siyuan/issues/12204
             BarUtils.setStatusBarVisibility(this, false);
             Utils.setImeEnabled(webView, true);

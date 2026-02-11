@@ -23,6 +23,7 @@ import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
+import android.content.res.Configuration;
 import android.net.Uri;
 import android.os.LocaleList;
 import android.print.PrintDocumentAdapter;
@@ -71,7 +72,7 @@ import mobile.Mobile;
  *
  * @author <a href="https://88250.b3log.org">Liang Ding</a>
  * @author <a href="https://github.com/wwxiaoqi">Jane Haring</a>
- * @version 1.5.0.2, Feb 10, 2026
+ * @version 1.5.0.3, Feb 11, 2026
  * @since 1.0.0
  */
 public final class Utils {
@@ -137,14 +138,9 @@ public final class Utils {
         currentToast.show();
     }
 
-    public static boolean isTablet(String userAgent) {
-        if (StringUtils.isEmpty(userAgent)) {
-            return false;
-        }
-
-        userAgent = userAgent.toLowerCase();
-        return userAgent.contains("tablet") || userAgent.contains("pad") ||
-                (userAgent.contains("android") && !userAgent.contains("mobile"));
+    public static boolean isTablet(final Context context) {
+        Configuration configuration = context.getResources().getConfiguration();
+        return (configuration.smallestScreenWidthDp >= 600);
     }
 
     public static boolean isCnChannel(final PackageManager pm) {
