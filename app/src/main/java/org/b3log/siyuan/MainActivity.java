@@ -183,7 +183,9 @@ public class MainActivity extends AppCompatActivity implements com.blankj.utilco
         bootProgressBar = findViewById(R.id.progressBar);
         bootDetailsText = findViewById(R.id.bootDetails);
         webView = findViewById(R.id.webView);
-        Utils.setImeEnabled(webView, false);
+        if (!Utils.isTablet(this)) {
+            Utils.setImeEnabled(webView, false);
+        }
 
         webView.setDownloadListener((url, userAgent, contentDisposition, mimetype, contentLength) -> {
             final Uri uri = Uri.parse(url);

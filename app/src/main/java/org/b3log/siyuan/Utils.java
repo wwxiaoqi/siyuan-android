@@ -175,6 +175,10 @@ public final class Utils {
     }
 
     public static void registerSoftKeyboardToolbar(final Activity activity, final WebView webView) {
+        if (Utils.isTablet(activity)) {
+            return;
+        }
+
         KeyboardUtils.registerSoftInputChangedListener(activity, height -> {
             if (KeyboardUtils.isSoftInputVisible(activity)) {
                 showKeyboardAndToolbar(webView);
