@@ -22,7 +22,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
-import android.content.res.AssetManager;
 import android.content.res.Configuration;
 import android.net.Uri;
 import android.os.LocaleList;
@@ -47,12 +46,8 @@ import com.blankj.utilcode.util.TimeUtils;
 
 import org.apache.commons.io.FileUtils;
 
-import java.io.BufferedInputStream;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.FileWriter;
-import java.io.InputStream;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
@@ -62,8 +57,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 
 import mobile.Mobile;
 
@@ -72,7 +65,7 @@ import mobile.Mobile;
  *
  * @author <a href="https://88250.b3log.org">Liang Ding</a>
  * @author <a href="https://github.com/wwxiaoqi">Jane Haring</a>
- * @version 1.5.0.3, Feb 11, 2026
+ * @version 1.5.0.4, Feb 15, 2026
  * @since 1.0.0
  */
 public final class Utils {
@@ -213,49 +206,11 @@ public final class Utils {
         });
     }
 
-    public static void unzipAsset(final AssetManager assetManager, final String zipName, final String targetDirectory) {
-        ZipInputStream zis = null;
+    public static void unzipAsset(final String appZipPath, final String targetDirectory) {
         try {
-            final InputStream zipFile = assetManager.open(zipName);
-            zis = new ZipInputStream(new BufferedInputStream(zipFile));
-            ZipEntry ze;
-            int count;
-            byte[] buffer = new byte[1024 * 512];
-            while ((ze = zis.getNextEntry()) != null) {
-                final File file = new File(targetDirectory, ze.getName());
-                try {
-                    ensureZipPathSafety(file, targetDirectory);
-                } catch (final Exception se) {
-                    throw se;
-                }
-
-                final File dir = ze.isDirectory() ? file : file.getParentFile();
-                if (!dir.isDirectory() && !dir.mkdirs())
-                    throw new FileNotFoundException("Failed to ensure directory: " + dir.getAbsolutePath());
-                if (ze.isDirectory())
-                    continue;
-                FileOutputStream fout = new FileOutputStream(file);
-                try {
-                    while ((count = zis.read(buffer)) != -1)
-                        fout.write(buffer, 0, count);
-                } finally {
-                    fout.close();
-                }
-            /* if time should be restored as well
-            long time = ze.getTime();
-            if (time > 0)
-                file.setLastModified(time);
-            */
-            }
+            Mobile.unzip(appZipPath, targetDirectory);
         } catch (final Exception e) {
-            Utils.logError("boot", "unzip asset [from=" + zipName + ", to=" + targetDirectory + "] failed", e);
-        } finally {
-            if (null != zis) {
-                try {
-                    zis.close();
-                } catch (final Exception e) {
-                }
-            }
+            Utils.logError("boot", "unzip asset [from=" + appZipPath + ", to=" + targetDirectory + "] failed", e);
         }
     }
 

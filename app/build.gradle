@@ -109,6 +109,5 @@ dependencies {
     implementation 'com.gitee.zackratos:UltimateBarX:0.8.1'
     implementation 'com.blankj:utilcodex:1.31.1'
     implementation 'com.koushikdutta.async:androidasync:3.1.0'
-
     implementation(name: 'kernel', ext: 'aar')
 }

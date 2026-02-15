@@ -70,6 +70,7 @@ import com.koushikdutta.async.util.Charsets;
 import com.zackratos.ultimatebarx.ultimatebarx.java.UltimateBarX;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.filefilter.DirectoryFileFilter;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.json.JSONArray;
@@ -93,7 +94,7 @@ import mobile.Mobile;
  * 主程序.
  *
  * @author <a href="https://88250.b3log.org">Liang Ding</a>
- * @version 1.1.3.1, Feb 11, 2026
+ * @version 1.1.3.2, Feb 15, 2026
  * @since 1.0.0
  */
 public class MainActivity extends AppCompatActivity implements com.blankj.utilcode.util.Utils.OnAppStatusChangedListener {
@@ -584,7 +585,16 @@ public class MainActivity extends AppCompatActivity implements com.blankj.utilco
             }
 
             setBootProgress("Initializing appearance...", 60);
-            Utils.unzipAsset(getAssets(), "app.zip", appDir + "/app");
+
+            try {
+                final String appZip = getCacheDir() + "/app.zip";
+                IOUtils.copy(getAssets().open("app.zip"), FileUtils.openOutputStream(new File(appZip)));
+                Utils.unzipAsset(appZip, appDir + "/app");
+            } catch (final Exception e) {
+                Utils.logError("boot", "unzip assets failed, exit application", e);
+                exit();
+                return;
+            }
 
             try {
                 FileUtils.writeStringToFile(appVerFile, Utils.versionCode + "", StandardCharsets.UTF_8);
