@@ -38,8 +38,6 @@ import android.widget.Toast;
 
 import androidx.annotation.StringRes;
 import androidx.browser.customtabs.CustomTabsIntent;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
 
 import com.blankj.utilcode.util.KeyboardUtils;
 import com.blankj.utilcode.util.StringUtils;
@@ -66,7 +64,7 @@ import mobile.Mobile;
  *
  * @author <a href="https://88250.b3log.org">Liang Ding</a>
  * @author <a href="https://github.com/wwxiaoqi">Jane Haring</a>
- * @version 1.5.0.4, Feb 15, 2026
+ * @version 1.5.0.5, Feb 18, 2026
  * @since 1.0.0
  */
 public final class Utils {
@@ -177,22 +175,15 @@ public final class Utils {
         }
 
         KeyboardUtils.registerSoftInputChangedListener(activity, height -> {
+            if (activity.isInMultiWindowMode()) {
+                return;
+            }
+
             if (KeyboardUtils.isSoftInputVisible(activity)) {
                 showKeyboardAndToolbar(webView);
             } else {
                 hideKeyboardAndToolbar(webView);
             }
-        });
-
-        ViewCompat.setOnApplyWindowInsetsListener(activity.getWindow().getDecorView(), (v, insets) -> {
-            // 多窗口模式下，监听窗口插图以获取 IME 状态
-            boolean isVisible = insets.isVisible(WindowInsetsCompat.Type.ime());
-            if (isVisible) {
-                showKeyboardAndToolbar(webView);
-            } else {
-                hideKeyboardAndToolbar(webView);
-            }
-            return insets;
         });
     }
 
